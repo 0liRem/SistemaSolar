@@ -5,6 +5,8 @@ A from-scratch 3D software renderer implemented in Rust, capable of loading and 
 ![Spaceship Render](1.png)
 ![Spaceship Render](2.png)
 ![Spaceship Render](3.png)
+
+
 *Spaceship rendered with dynamic lighting*
 
 ## Features
