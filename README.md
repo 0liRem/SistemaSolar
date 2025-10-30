@@ -34,7 +34,7 @@ A from-scratch 3D software renderer implemented in Rust, capable of loading and 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/SistemaSolar.git
+git clone https://github.com/0liRem/SistemaSolar
 cd SistemaSolar
 ```
 
