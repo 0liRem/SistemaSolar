@@ -15,12 +15,13 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
     return fragments;
   }
 
-  // Límite de seguridad para evitar bucles infinitos
+  // Límite de seguridad más estricto
   let width = (max_x - min_x) as usize;
   let height = (max_y - min_y) as usize;
   
-  if width > 2000 || height > 2000 {
-    return fragments; // Triángulo demasiado grande, skip
+  // Reducir límite para mejorar rendimiento
+  if width > 1000 || height > 1000 {
+    return fragments;
   }
 
   let light_dir = Vec3::new(0.0, 0.0, -1.0);
@@ -31,29 +32,41 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
     return fragments;
   }
 
+  let inv_area = 1.0 / triangle_area; // Pre-calcular inverso
+
+  // Pre-calcular normales transformadas
+  let n1 = v1.transformed_normal;
+  let n2 = v2.transformed_normal;
+  let n3 = v3.transformed_normal;
+
+  // Optimización: iterar con step para reducir fragmentos
+  let step = 1; // Cambiar a 2 si necesitas más rendimiento
+  
   // Iterar sobre cada pixel en el bounding box
-  for y in min_y..=max_y {
-    for x in min_x..=max_x {
+  for y in (min_y..=max_y).step_by(step) {
+    for x in (min_x..=max_x).step_by(step) {
       let point = Vec3::new(x as f32 + 0.5, y as f32 + 0.5, 0.0);
 
-      // Calcular coordenadas baricéntricas
-      let (w1, w2, w3) = barycentric_coordinates(&point, &a, &b, &c, triangle_area);
+      // Calcular coordenadas baricéntricas (optimizado)
+      let w1 = edge_function(&b, &c, &point) * inv_area;
+      let w2 = edge_function(&c, &a, &point) * inv_area;
+      let w3 = edge_function(&a, &b, &point) * inv_area;
 
       // Verificar si el punto está dentro del triángulo
-      if w1 >= 0.0 && w1 <= 1.0 && 
-         w2 >= 0.0 && w2 <= 1.0 &&
-         w3 >= 0.0 && w3 <= 1.0 &&
-         (w1 + w2 + w3 - 1.0).abs() < 0.01 {
+      // Optimización: verificar rango con una sola comparación
+      if w1 >= -0.01 && w1 <= 1.01 && 
+         w2 >= -0.01 && w2 <= 1.01 &&
+         w3 >= -0.01 && w3 <= 1.01 {
         
-        // Interpolar normal
-        let normal = (v1.transformed_normal * w1 + v2.transformed_normal * w2 + v3.transformed_normal * w3).normalize();
+        // Interpolar normal (optimizado)
+        let normal = (n1 * w1 + n2 * w2 + n3 * w3).normalize();
 
         // Calcular intensidad de iluminación
         let intensity = dot(&normal, &light_dir).max(0.0);
 
-        // Color base gris con iluminación
-        let base_color = Color::new(100, 100, 100);
-        let lit_color = base_color * intensity.max(0.3); // Luz ambiental mínima 30%
+        // Color base gris con iluminación - más simple
+        let base_intensity = (intensity * 200.0 + 55.0) as u8;
+        let lit_color = Color::new(base_intensity, base_intensity, base_intensity);
 
         // Interpolar profundidad
         let depth = a.z * w1 + b.z * w2 + c.z * w3;
@@ -66,6 +79,7 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
   fragments
 }
 
+#[inline(always)]
 fn calculate_bounding_box(v1: &Vec3, v2: &Vec3, v3: &Vec3) -> (i32, i32, i32, i32) {
     let min_x = v1.x.min(v2.x).min(v3.x).floor() as i32;
     let min_y = v1.y.min(v2.y).min(v3.y).floor() as i32;
@@ -75,14 +89,7 @@ fn calculate_bounding_box(v1: &Vec3, v2: &Vec3, v3: &Vec3) -> (i32, i32, i32, i3
     (min_x, min_y, max_x, max_y)
 }
 
-fn barycentric_coordinates(p: &Vec3, a: &Vec3, b: &Vec3, c: &Vec3, area: f32) -> (f32, f32, f32) {
-    let w1 = edge_function(b, c, p) / area;
-    let w2 = edge_function(c, a, p) / area;
-    let w3 = edge_function(a, b, p) / area;
-
-    (w1, w2, w3)
-}
-
+#[inline(always)]
 fn edge_function(a: &Vec3, b: &Vec3, c: &Vec3) -> f32 {
     (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x)
 }
