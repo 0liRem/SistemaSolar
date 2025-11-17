@@ -116,6 +116,7 @@ cargo run --release
 | **D** | Strafe right |
 | **Q** | Rotate left |
 | **E** | Rotate right |
+| **V** | Instant Warp |
 
 ### Camera Controls
 | Key | Action |
